@@ -17,6 +17,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using Image = SixLabors.ImageSharp.Image;
+using Windows.Foundation;
 
 namespace Nagi.WinUI.Services.Implementations;
 
@@ -112,15 +113,20 @@ public class TaskbarThumbnailGenerator : ITaskbarThumbnailGenerator
             // Add to the visual tree
             _hostGrid.Children.Add(buttonContainer);
 
-            // Force update layout
+            // Layout pass
+            buttonContainer.Measure(new Size(40, 40));
+            buttonContainer.Arrange(new Rect(0, 0, 40, 40));
             _hostGrid.UpdateLayout();
+
+            // Allow a small tick for composition (WinUI 3 quirk)
+            await Task.Delay(20);
 
             // 2. Render to RenderTargetBitmap
             var rtb = new RenderTargetBitmap();
             await rtb.RenderAsync(buttonContainer);
 
             var pixelBuffer = await rtb.GetPixelsAsync();
-            var bytes = pixelBuffer.ToArray(); // BGRA8 - Now valid with WindowsRuntime
+            var bytes = pixelBuffer.ToArray(); // BGRA8
             var width = rtb.PixelWidth;
             var height = rtb.PixelHeight;
 

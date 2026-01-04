@@ -58,6 +58,9 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
         _hwnd = (HWND)windowHandle;
         _wmTaskbarButtonCreated = PInvoke.RegisterWindowMessage("TaskbarButtonCreated");
 
+        // Ensure we receive the message even if UIPI blocks it (e.g. running as Admin)
+        PInvoke.ChangeWindowMessageFilterEx(_hwnd, _wmTaskbarButtonCreated, PInvoke.MSGFLT_ALLOW, null);
+
         // Hook the window procedure to listen for messages
         PInvoke.SetWindowSubclass(_hwnd, _subclassProcDelegate, SubclassId, 0);
 
@@ -67,8 +70,28 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
 
         _isInitialized = true;
 
-        // If taskbar is already available (e.g. re-initialization), try to setup
+        // Initial setup attempt
         InitializeTaskbarList();
+
+        // Start a retry loop to ensure buttons are added if the window wasn't ready immediately
+        _ = RetryInitializationAsync();
+    }
+
+    private async Task RetryInitializationAsync()
+    {
+        // Try up to 5 times every 1 second to ensure buttons are added
+        for (int i = 0; i < 5; i++)
+        {
+            if (_areButtonsAdded) return;
+            await Task.Delay(1000);
+
+            // Dispatch to UI thread if needed (UpdateButtons is async void but usually safe)
+            // But checking _areButtonsAdded is thread-safe enough for this boolean check
+            if (!_areButtonsAdded)
+            {
+                InitializeTaskbarList();
+            }
+        }
     }
 
     private void InitializeTaskbarList()
@@ -150,7 +173,6 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
     {
         if (_taskbarList == null) return;
 
-        // "I want the bar to be hidden when nothing is playing"
         bool hasSong = _playbackService.CurrentTrack != null;
 
         var isPlaying = _playbackService.IsPlaying;
@@ -166,6 +188,12 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
             prevIcon = await _thumbnailGenerator.GenerateIconAsync(GlyphPrevious);
             playPauseIcon = await _thumbnailGenerator.GenerateIconAsync(playPauseGlyph);
             nextIcon = await _thumbnailGenerator.GenerateIconAsync(GlyphNext);
+        }
+
+        // LOGGING: Check if icons are generated
+        if (hasSong && prevIcon == IntPtr.Zero)
+        {
+             _logger.LogWarning("Icons generation failed (Handle is 0).");
         }
 
         var buttons = new THUMBBUTTON[3];
@@ -222,7 +250,6 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
                         {
                             _logger.LogWarning("Failed to UPDATE taskbar buttons. HR: {HResult}. Attempting re-add.", hr);
 
-                            // If update fails (e.g. explorer restart), try adding again
                             var hrAdd = _taskbarList.ThumbBarAddButtons(_hwnd, (uint)buttons.Length, pButtons);
                             if (hrAdd.Succeeded)
                             {
@@ -230,7 +257,7 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
                             }
                             else
                             {
-                                _areButtonsAdded = false; // Reset state if both failed
+                                _areButtonsAdded = false;
                             }
                         }
                     }
