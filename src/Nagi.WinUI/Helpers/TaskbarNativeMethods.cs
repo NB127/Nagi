@@ -1,15 +1,13 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 
 using System;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 
 // Originally sourced from https://github.com/Wox-launcher/Wox/blob/master/Wox.Infrastructure/Windows/Taskbar/TaskbarNativeMethods.cs
 // Originally sourced from http://archive.msdn.microsoft.com/WindowsAPICodePack
 namespace Nagi.WinUI.Helpers;
 
-internal static class TaskbarNativeMethods
+internal static partial class TaskbarNativeMethods
 {
     internal const int WM_COMMAND = 0x0111;
     internal const int THBN_CLICKED = 0x1800;
@@ -137,16 +135,15 @@ internal static class TaskbarNativeMethods
         NONINTERACTIVE = 0x0010
     }
 
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    internal static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-
     [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool DestroyIcon(IntPtr hIcon);
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     internal static extern IntPtr LoadLibrary(string lpFileName);
 
     [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool FreeLibrary(IntPtr hModule);
 
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
@@ -166,6 +163,16 @@ internal static class TaskbarNativeMethods
     {
         return (short)(((long)wParam) & 0xffff);
     }
+
+    internal delegate nint WindowProc(nint hWnd, int msg, nint wParam, nint lParam);
+
+    internal const int GWLP_WNDPROC = -4;
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+    internal static extern nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
+
+    [DllImport("user32.dll")]
+    internal static extern nint CallWindowProc(nint lpPrevWndFunc, nint hWnd, int msg, nint wParam, nint lParam);
 }
 
 [StructLayout(LayoutKind.Sequential)]
