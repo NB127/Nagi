@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.InteropServices;
-
 using Microsoft.Extensions.Logging;
 using Nagi.Core.Services.Abstractions;
 using Nagi.WinUI.Helpers;
@@ -15,11 +14,11 @@ public class TaskbarService : ITaskbarService, IDisposable
     private const int PLAY_PAUSE_BUTTON_ID = 2;
     private const int NEXT_BUTTON_ID = 3;
 
-    private readonly IMusicPlaybackService _playbackService;
     private readonly ILogger<TaskbarService> _logger;
+    private readonly IMusicPlaybackService _playbackService;
 
 
-    private ITaskbarList3? _taskbarList;
+    private ITaskbarList4? _taskbarList;
     private nint _windowHandle;
     private bool _isDisposed;
 
@@ -29,10 +28,12 @@ public class TaskbarService : ITaskbarService, IDisposable
     private nint _playIcon;
     private nint _pauseIcon;
 
-    public TaskbarService(IMusicPlaybackService playbackService, ILogger<TaskbarService> logger)
+    public TaskbarService(
+        ILogger<TaskbarService> logger,
+        IMusicPlaybackService playbackService)
     {
-        _playbackService = playbackService;
         _logger = logger;
+        _playbackService = playbackService;
     }
 
     public void Initialize(nint windowHandle)
@@ -41,12 +42,13 @@ public class TaskbarService : ITaskbarService, IDisposable
 
         try
         {
-            _taskbarList = (ITaskbarList3)new TaskbarList();
+            _taskbarList = (ITaskbarList4)Activator.CreateInstance(Type.GetTypeFromCLSID(TaskbarListGuid))!;
             _taskbarList.HrInit();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to initialize TaskbarList3");
+            _logger.LogError(ex, "Failed to initialize TaskbarList4");
+            _taskbarList = null;
             return;
         }
 
@@ -55,13 +57,13 @@ public class TaskbarService : ITaskbarService, IDisposable
 
         _playbackService.PlaybackStateChanged += OnPlaybackStateChanged;
         _playbackService.TrackChanged += OnTrackChanged;
-        
+
         UpdateTaskbarButtons();
     }
 
     public void HandleWindowMessage(int msg, nint wParam, nint lParam)
     {
-        if (msg != WM_COMMAND || HIWORD(wParam) != THBN_CLICKED) return;
+        if (_taskbarList is null || msg != WM_COMMAND || HIWORD(wParam) != THBN_CLICKED) return;
 
         switch (LOWORD(wParam))
         {
@@ -88,7 +90,7 @@ public class TaskbarService : ITaskbarService, IDisposable
         _buttons[0] = new THUMBBUTTON
         {
             iId = PREVIOUS_BUTTON_ID,
-            dwMask = THB.Icon | THB.Tooltip | THB.Flags,
+            dwMask = THB.ICON | THB.TOOLTIP | THB.FLAGS,
             hIcon = _prevIcon,
             szTip = "Previous"
         };
@@ -97,7 +99,7 @@ public class TaskbarService : ITaskbarService, IDisposable
         _buttons[1] = new THUMBBUTTON
         {
             iId = PLAY_PAUSE_BUTTON_ID,
-            dwMask = THB.Icon | THB.Tooltip | THB.Flags,
+            dwMask = THB.ICON | THB.TOOLTIP | THB.FLAGS,
             hIcon = _playIcon,
             szTip = "Play"
         };
@@ -106,15 +108,15 @@ public class TaskbarService : ITaskbarService, IDisposable
         _buttons[2] = new THUMBBUTTON
         {
             iId = NEXT_BUTTON_ID,
-            dwMask = THB.Icon | THB.Tooltip | THB.Flags,
+            dwMask = THB.ICON | THB.TOOLTIP | THB.FLAGS,
             hIcon = _nextIcon,
             szTip = "Next"
         };
 
-        var addButtonsResult = _taskbarList?.ThumbBarAddButtons(_windowHandle, (uint)_buttons.Length, _buttons);
-        if (addButtonsResult != 0)
+        var hResult = _taskbarList?.ThumbBarAddButtons(_windowHandle, (uint)_buttons.Length, _buttons) ?? 1;
+        if (hResult < 0)
         {
-            _logger.LogError("Failed to add thumbnail buttons. HRESULT: {Result}", addButtonsResult);
+            _logger.LogError("Failed to add thumbnail buttons: HRESULT 0x{HResult:X}", hResult);
         }
     }
 
@@ -122,8 +124,9 @@ public class TaskbarService : ITaskbarService, IDisposable
     {
         if (_taskbarList == null || _buttons == null) return;
 
+        // Previous button state
         var canGoPrevious = _playbackService.CurrentQueueIndex > 0 || _playbackService.CurrentRepeatMode == Core.Services.Data.RepeatMode.RepeatAll;
-        _buttons[0].dwFlags = canGoPrevious ? THBF.Enabled : THBF.Disabled;
+        _buttons[0].dwFlags = canGoPrevious ? THBF.ENABLED : THBF.DISABLED;
 
         // Play/Pause button state
         if (_playbackService.IsPlaying)
@@ -136,19 +139,19 @@ public class TaskbarService : ITaskbarService, IDisposable
             _buttons[1].hIcon = _playIcon;
             _buttons[1].szTip = "Play";
         }
-        _buttons[1].dwFlags = THBF.Enabled;
+        _buttons[1].dwFlags = THBF.ENABLED;
 
         // Next button state
         var canGoNext = _playbackService.CurrentQueueIndex < _playbackService.PlaybackQueue.Count - 1 || _playbackService.CurrentRepeatMode == Core.Services.Data.RepeatMode.RepeatAll;
-        _buttons[2].dwFlags = canGoNext ? THBF.Enabled : THBF.Disabled;
+        _buttons[2].dwFlags = canGoNext ? THBF.ENABLED : THBF.DISABLED;
         
-        var updateButtonsResult = _taskbarList.ThumbBarUpdateButtons(_windowHandle, (uint)_buttons.Length, _buttons);
-        if (updateButtonsResult != 0)
+        var hResult = _taskbarList.ThumbBarUpdateButtons(_windowHandle, (uint)_buttons.Length, _buttons);
+        if (hResult < 0)
         {
-            _logger.LogError("Failed to update thumbnail buttons. HRESULT: {Result}", updateButtonsResult);
+            _logger.LogError("Failed to update thumbnail buttons: HRESULT 0x{HResult:X}", hResult);
         }
     }
-    
+
     private void LoadIcons()
     {
         _prevIcon = LoadIconFromSystem("imageres.dll", 222);
@@ -159,8 +162,14 @@ public class TaskbarService : ITaskbarService, IDisposable
     
     private nint LoadIconFromSystem(string dllName, int resourceId)
     {
+        const uint LR_SHARED = 0x8000;
+
         var lib = LoadLibrary(dllName);
-        var icon = LoadImage(lib, (nint)resourceId, 1, 0, 0, LR_SHARED | LR_DEFAULTSIZE);
+        var icon = LoadImage(lib, (nint)resourceId, 1, 0, 0, LR_SHARED);
+
+        // Do not free the library, the system needs it for the icon to be loaded.
+        // FreeLibrary(lib);
+
         return icon;
     }
 

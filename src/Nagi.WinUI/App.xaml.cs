@@ -475,8 +475,9 @@ public partial class App : Application
             new LibVlcAudioPlayerService(provider.GetRequiredService<IDispatcherService>(),
                 provider.GetRequiredService<ILogger<LibVlcAudioPlayerService>>()));
         services.AddSingleton<ITaskbarService>(provider =>
-            new TaskbarService(provider.GetRequiredService<IMusicPlaybackService>(),
-                provider.GetRequiredService<ILogger<TaskbarService>>()));
+            new TaskbarService(
+                provider.GetRequiredService<ILogger<TaskbarService>>(),
+                provider.GetRequiredService<IMusicPlaybackService>()));
     }
 
     private static void ConfigureViewModels(IServiceCollection services)
