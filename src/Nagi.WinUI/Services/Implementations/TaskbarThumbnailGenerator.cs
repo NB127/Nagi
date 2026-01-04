@@ -120,9 +120,14 @@ public class TaskbarThumbnailGenerator : ITaskbarThumbnailGenerator
             await rtb.RenderAsync(buttonContainer);
 
             var pixelBuffer = await rtb.GetPixelsAsync();
+<<<<<<< Updated upstream
             var bytes = pixelBuffer.ToArray(); // BGRA8 - Now valid with WindowsRuntime
             var width = rtb.PixelWidth;
             var height = rtb.PixelHeight;
+=======
+            var bytes = new byte[pixelBuffer.Length];
+            Windows.Storage.Streams.DataReader.FromBuffer(pixelBuffer).ReadBytes(bytes);
+>>>>>>> Stashed changes
 
             // Clean up
             _hostGrid.Children.Remove(buttonContainer);
