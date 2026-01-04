@@ -61,9 +61,9 @@ public class TaskbarService : ITaskbarService, IDisposable
 
     public void HandleWindowMessage(int msg, nint wParam, nint lParam)
     {
-        if (msg != WM_COMMAND || (int)lParam != THBN_CLICKED) return;
+        if (msg != WM_COMMAND || HIWORD(wParam) != THBN_CLICKED) return;
 
-        switch ((int)wParam)
+        switch (LOWORD(wParam))
         {
             case PREVIOUS_BUTTON_ID:
                 _playbackService.PreviousAsync();
@@ -160,7 +160,7 @@ public class TaskbarService : ITaskbarService, IDisposable
     private nint LoadIconFromSystem(string dllName, int resourceId)
     {
         var lib = LoadLibrary(dllName);
-        var icon = LoadImage(lib, (nint)resourceId, 1, 0, 0, 0);
+        var icon = LoadImage(lib, (nint)resourceId, 1, 0, 0, LR_SHARED | LR_DEFAULTSIZE);
         return icon;
     }
 
