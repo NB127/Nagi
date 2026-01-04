@@ -54,29 +54,60 @@ internal static class TaskbarNativeMethods
     }
 
     [ComImport]
+    [Guid("56FDF342-FD6D-11d0-958A-006097C9A090")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface ITaskbarList
+    {
+        [PreserveSig]
+        void HrInit();
+        [PreserveSig]
+        void AddTab(IntPtr hwnd);
+        [PreserveSig]
+        void DeleteTab(IntPtr hwnd);
+        [PreserveSig]
+        void ActivateTab(IntPtr hwnd);
+        [PreserveSig]
+        void SetActiveAlt(IntPtr hwnd);
+    }
+
+    [ComImport]
+    [Guid("602D4487-4494-4457-A9D5-4B3819528A63")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface ITaskbarList2 : ITaskbarList
+    {
+        [PreserveSig]
+        void MarkFullscreenWindow(IntPtr hwnd, [MarshalAs(UnmanagedType.Bool)] bool fFullscreen);
+    }
+
+    [ComImport]
     [Guid("ea1afb91-9e28-4b86-90e9-9e9f8a5eefaf")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface ITaskbarList3
+    internal interface ITaskbarList3 : ITaskbarList2
     {
-        // ITaskbarList
-        void HrInit();
-        void AddTab(nint hwnd);
-        void DeleteTab(nint hwnd);
-        void ActivateTab(nint hwnd);
-        void SetActiveAlt(nint hwnd);
-
-        // ITaskbarList2
-        void MarkFullscreenWindow(nint hwnd, [MarshalAs(UnmanagedType.Bool)] bool fFullscreen);
-
-        // ITaskbarList3
-        void SetProgressValue(nint hwnd, ulong ullCompleted, ulong ullTotal);
-        void SetProgressState(nint hwnd, uint tbpFlags);
-        void ThumbBarAddButtons(nint hwnd, uint cButtons, [MarshalAs(UnmanagedType.LPArray)] THUMBBUTTON[] pButton);
-        void ThumbBarUpdateButtons(nint hwnd, uint cButtons, [MarshalAs(UnmanagedType.LPArray)] THUMBBUTTON[] pButton);
-        void ThumbBarSetImageList(nint hwnd, nint himl);
-        void SetOverlayIcon(nint hwnd, nint hIcon, [MarshalAs(UnmanagedType.LPWStr)] string pszDescription);
-        void SetThumbnailTooltip(nint hwnd, [MarshalAs(UnmanagedType.LPWStr)] string pszTip);
-        void SetThumbnailClip(nint hwnd, nint prcClip);
+        [PreserveSig]
+        void SetProgressValue(IntPtr hwnd, ulong ullCompleted, ulong ullTotal);
+        [PreserveSig]
+        void SetProgressState(IntPtr hwnd, uint tbpFlags);
+        [PreserveSig]
+        void RegisterTab(IntPtr hwndTab, IntPtr hwndMDI);
+        [PreserveSig]
+        void UnregisterTab(IntPtr hwndTab);
+        [PreserveSig]
+        void SetTabOrder(IntPtr hwndTab, IntPtr hwndInsertBefore);
+        [PreserveSig]
+        void SetTabActive(IntPtr hwndTab, IntPtr hwndMDI, uint dwReserved);
+        [PreserveSig]
+        int ThumbBarAddButtons(IntPtr hwnd, uint cButtons, [MarshalAs(UnmanagedType.LPArray)] THUMBBUTTON[] pButton);
+        [PreserveSig]
+        int ThumbBarUpdateButtons(IntPtr hwnd, uint cButtons, [MarshalAs(UnmanagedType.LPArray)] THUMBBUTTON[] pButton);
+        [PreserveSig]
+        void ThumbBarSetImageList(IntPtr hwnd, IntPtr himl);
+        [PreserveSig]
+        void SetOverlayIcon(IntPtr hwnd, IntPtr hIcon, [MarshalAs(UnmanagedType.LPWStr)] string pszDescription);
+        [PreserveSig]
+        void SetThumbnailTooltip(IntPtr hwnd, [MarshalAs(UnmanagedType.LPWStr)] string pszTip);
+        [PreserveSig]
+        void SetThumbnailClip(IntPtr hwnd, IntPtr prcClip);
     }
     
     [ComImport]

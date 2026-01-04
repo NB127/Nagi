@@ -111,13 +111,10 @@ public class TaskbarService : ITaskbarService, IDisposable
             szTip = "Next"
         };
 
-        try
+        var addButtonsResult = _taskbarList?.ThumbBarAddButtons(_windowHandle, (uint)_buttons.Length, _buttons);
+        if (addButtonsResult != 0)
         {
-            _taskbarList?.ThumbBarAddButtons(_windowHandle, (uint)_buttons.Length, _buttons);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to add thumbnail buttons");
+            _logger.LogError("Failed to add thumbnail buttons. HRESULT: {Result}", addButtonsResult);
         }
     }
 
@@ -145,13 +142,10 @@ public class TaskbarService : ITaskbarService, IDisposable
         var canGoNext = _playbackService.CurrentQueueIndex < _playbackService.PlaybackQueue.Count - 1 || _playbackService.CurrentRepeatMode == Core.Services.Data.RepeatMode.RepeatAll;
         _buttons[2].dwFlags = canGoNext ? THBF_ENABLED : THBF_DISABLED;
         
-        try
+        var updateButtonsResult = _taskbarList.ThumbBarUpdateButtons(_windowHandle, (uint)_buttons.Length, _buttons);
+        if (updateButtonsResult != 0)
         {
-            _taskbarList.ThumbBarUpdateButtons(_windowHandle, (uint)_buttons.Length, _buttons);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update thumbnail buttons");
+            _logger.LogError("Failed to update thumbnail buttons. HRESULT: {Result}", updateButtonsResult);
         }
     }
     
