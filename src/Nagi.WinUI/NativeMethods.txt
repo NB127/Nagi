@@ -18,3 +18,4 @@ GetWindowLong
 SetWindowLong
 GWL_WNDPROC
 CallWindowProc
+GetModuleHandle

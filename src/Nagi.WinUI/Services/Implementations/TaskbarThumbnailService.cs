@@ -36,6 +36,9 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
     // Subclass ID
     private const uint SubclassId = 101;
 
+    // Delegate to keep alive
+    private SUBCLASSPROC _subclassProcDelegate;
+
     public TaskbarThumbnailService(
         ILogger<TaskbarThumbnailService> logger,
         IMusicPlaybackService playbackService,
@@ -44,6 +47,7 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
         _logger = logger;
         _playbackService = playbackService;
         _thumbnailGenerator = thumbnailGenerator;
+        _subclassProcDelegate = new SUBCLASSPROC(SubclassProc);
     }
 
     public void Initialize(IntPtr windowHandle)
@@ -54,7 +58,7 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
         _wmTaskbarButtonCreated = PInvoke.RegisterWindowMessage("TaskbarButtonCreated");
 
         // Hook the window procedure to listen for messages
-        PInvoke.SetWindowSubclass(_hwnd, SubclassProc, SubclassId, 0);
+        PInvoke.SetWindowSubclass(_hwnd, _subclassProcDelegate, SubclassId, 0);
 
         // Subscribe to playback events
         _playbackService.PlaybackStateChanged += OnPlaybackStateChanged;
@@ -89,7 +93,7 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
         }
     }
 
-    private LRESULT SubclassProc(HWND hWnd, uint uMsg, WPARAM wParam, LPARAM lParam, uint uIdSubclass, nuint dwRefData)
+    private LRESULT SubclassProc(HWND hWnd, uint uMsg, WPARAM wParam, LPARAM lParam, nuint uIdSubclass, nuint dwRefData)
     {
         if (uMsg == _wmTaskbarButtonCreated)
         {
@@ -191,21 +195,34 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
 
         try
         {
-            // Try to update first
-            _taskbarList.ThumbBarUpdateButtons(_hwnd, (uint)buttons.Length, buttons);
+            unsafe
+            {
+                fixed (THUMBBUTTON* pButtons = buttons)
+                {
+                    try
+                    {
+                        // Try to update first
+                         _taskbarList.ThumbBarUpdateButtons(_hwnd, (uint)buttons.Length, pButtons);
+                    }
+                    catch
+                    {
+                        // If update fails, maybe we haven't added them yet.
+                        try
+                        {
+                             _taskbarList.ThumbBarAddButtons(_hwnd, (uint)buttons.Length, pButtons);
+                        }
+                        catch (Exception ex)
+                        {
+                            // This can happen if the window is not yet visible or taskbar button not created
+                            _logger.LogTrace(ex, "Failed to update/add taskbar buttons (expected during startup).");
+                        }
+                    }
+                }
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            // If update fails, maybe we haven't added them yet.
-            try
-            {
-                _taskbarList.ThumbBarAddButtons(_hwnd, (uint)buttons.Length, buttons);
-            }
-            catch (Exception ex)
-            {
-                // This can happen if the window is not yet visible or taskbar button not created
-                _logger.LogTrace(ex, "Failed to update/add taskbar buttons (expected during startup).");
-            }
+             _logger.LogError(ex, "Error updating taskbar buttons.");
         }
 
         // Clean up icons
@@ -220,7 +237,7 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
         {
             _playbackService.PlaybackStateChanged -= OnPlaybackStateChanged;
             _playbackService.TrackChanged -= OnTrackChanged;
-            PInvoke.RemoveWindowSubclass(_hwnd, SubclassProc, SubclassId);
+            PInvoke.RemoveWindowSubclass(_hwnd, _subclassProcDelegate, SubclassId);
             _isInitialized = false;
         }
     }

@@ -8,12 +8,15 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Nagi.WinUI.Services.Abstractions;
 using Windows.Win32;
+using Windows.Win32.Foundation;
 using Windows.Win32.UI.WindowsAndMessaging;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.WindowsRuntime;
 using Microsoft.UI.Dispatching;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using Image = SixLabors.ImageSharp.Image;
 
 namespace Nagi.WinUI.Services.Implementations;
 
@@ -117,13 +120,15 @@ public class TaskbarThumbnailGenerator : ITaskbarThumbnailGenerator
             await rtb.RenderAsync(buttonContainer);
 
             var pixelBuffer = await rtb.GetPixelsAsync();
-            var bytes = pixelBuffer.ToArray(); // BGRA8
+            var bytes = pixelBuffer.ToArray(); // BGRA8 - Now valid with WindowsRuntime
+            var width = rtb.PixelWidth;
+            var height = rtb.PixelHeight;
 
             // Clean up
             _hostGrid.Children.Remove(buttonContainer);
 
             // 3. Process with ImageSharp and convert to HICON
-            return ProcessAndCreateIcon(bytes, 40, 40);
+            return ProcessAndCreateIcon(bytes, width, height);
         }
         catch (Exception ex)
         {
@@ -134,24 +139,12 @@ public class TaskbarThumbnailGenerator : ITaskbarThumbnailGenerator
 
     private unsafe nint ProcessAndCreateIcon(byte[] bgraBytes, int width, int height)
     {
-        // Load into ImageSharp to potentially handle any format discrepancies or flipping
-        // Win32 CreateIcon/Bitmaps are often bottom-up, but RenderTargetBitmap is top-down.
-        // However, CreateIcon usually takes the bits as they are. If we find they are upside down, we can flip here.
-        // Standard DIBs are bottom-up, but CreateIcon with compatible bitmap might be top-down?
-        // Let's assume standard behavior first. If needed, we can FlipVertical.
-
-        // Actually, CreateIcon with a color bitmap usually expects it to be device-dependent or specific DIB.
-        // If we use ImageSharp to manipulate it, we can ensure we have what we need.
-
-        // Let's use ImageSharp to load the pixel data.
+        // Load into ImageSharp
         using var image = Image.LoadPixelData<Bgra32>(bgraBytes, width, height);
 
         // Note: If icons appear upside down, uncomment the following line:
         // image.Mutate(x => x.Flip(FlipMode.Vertical));
 
-        // We can just use the bytes directly if no flipping is needed.
-        // But since we loaded it, let's get the bytes back out just to be sure layout is consistent.
-        // (This step is technically redundant if we don't mutate, but safe).
         var processedBytes = new byte[width * height * 4];
         image.CopyPixelDataTo(processedBytes);
 
@@ -166,7 +159,7 @@ public class TaskbarThumbnailGenerator : ITaskbarThumbnailGenerator
         fixed (byte* pXorBits = processedBytes)
         {
              return (nint)PInvoke.CreateIcon(
-                PInvoke.GetModuleHandle((string)null),
+                new HINSTANCE(PInvoke.GetModuleHandle((PCWSTR)null)),
                 width,
                 height,
                 1,  // Planes
