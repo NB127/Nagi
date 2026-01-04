@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
+using Microsoft.Extensions.Logging;
 using Nagi.Core.Services.Abstractions;
 using Nagi.WinUI.Helpers;
 using Nagi.WinUI.Services.Abstractions;
@@ -15,6 +16,7 @@ public class TaskbarService : ITaskbarService, IDisposable
     private const int NEXT_BUTTON_ID = 3;
 
     private readonly IMusicPlaybackService _playbackService;
+    private readonly ILogger<TaskbarService> _logger;
 
 
     private ITaskbarList3? _taskbarList;
@@ -27,10 +29,10 @@ public class TaskbarService : ITaskbarService, IDisposable
     private nint _playIcon;
     private nint _pauseIcon;
 
-    public TaskbarService(IMusicPlaybackService playbackService)
+    public TaskbarService(IMusicPlaybackService playbackService, ILogger<TaskbarService> logger)
     {
         _playbackService = playbackService;
-        
+        _logger = logger;
     }
 
     public void Initialize(nint windowHandle)
@@ -44,7 +46,7 @@ public class TaskbarService : ITaskbarService, IDisposable
         }
         catch (Exception ex)
         {
-            Console.Write("Failed to initialize TaskbarList3: " + ex.Message);
+            _logger.LogError(ex, "Failed to initialize TaskbarList3");
             return;
         }
 
@@ -115,7 +117,7 @@ public class TaskbarService : ITaskbarService, IDisposable
         }
         catch (Exception ex)
         {
-           Console.Write("Failed to add thumbnail buttons: " + ex.Message);
+            _logger.LogError(ex, "Failed to add thumbnail buttons");
         }
     }
 
@@ -123,36 +125,25 @@ public class TaskbarService : ITaskbarService, IDisposable
     {
         if (_taskbarList == null || _buttons == null) return;
 
-        var isMusicPlaying = _playbackService.CurrentTrack != null;
-        if (!isMusicPlaying)
+        var canGoPrevious = _playbackService.CurrentQueueIndex > 0 || _playbackService.CurrentRepeatMode == Core.Services.Data.RepeatMode.RepeatAll;
+        _buttons[0].dwFlags = canGoPrevious ? THBF_ENABLED : THBF_DISABLED;
+
+        // Play/Pause button state
+        if (_playbackService.IsPlaying)
         {
-            for (var i = 0; i < _buttons.Length; i++)
-            {
-                _buttons[i].dwFlags = THBF_HIDDEN;
-            }
+            _buttons[1].hIcon = _pauseIcon;
+            _buttons[1].szTip = "Pause";
         }
         else
         {
-            var canGoPrevious = _playbackService.CurrentQueueIndex > 0 || _playbackService.CurrentRepeatMode == Core.Services.Data.RepeatMode.RepeatAll;
-            _buttons[0].dwFlags = canGoPrevious ? THBF_ENABLED : THBF_DISABLED;
-
-            // Play/Pause button state
-            if (_playbackService.IsPlaying)
-            {
-                _buttons[1].hIcon = _pauseIcon;
-                _buttons[1].szTip = "Pause";
-            }
-            else
-            {
-                _buttons[1].hIcon = _playIcon;
-                _buttons[1].szTip = "Play";
-            }
-            _buttons[1].dwFlags = THBF_ENABLED;
-
-            // Next button state
-            var canGoNext = _playbackService.CurrentQueueIndex < _playbackService.PlaybackQueue.Count - 1 || _playbackService.CurrentRepeatMode == Core.Services.Data.RepeatMode.RepeatAll;
-            _buttons[2].dwFlags = canGoNext ? THBF_ENABLED : THBF_DISABLED;
+            _buttons[1].hIcon = _playIcon;
+            _buttons[1].szTip = "Play";
         }
+        _buttons[1].dwFlags = THBF_ENABLED;
+
+        // Next button state
+        var canGoNext = _playbackService.CurrentQueueIndex < _playbackService.PlaybackQueue.Count - 1 || _playbackService.CurrentRepeatMode == Core.Services.Data.RepeatMode.RepeatAll;
+        _buttons[2].dwFlags = canGoNext ? THBF_ENABLED : THBF_DISABLED;
         
         try
         {
@@ -160,7 +151,7 @@ public class TaskbarService : ITaskbarService, IDisposable
         }
         catch (Exception ex)
         {
-           Console.WriteLine("Failed to update thumbnail buttons: " + ex.Message);
+            _logger.LogError(ex, "Failed to update thumbnail buttons");
         }
     }
     
