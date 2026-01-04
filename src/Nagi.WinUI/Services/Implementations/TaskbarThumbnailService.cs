@@ -21,6 +21,7 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
     private HWND _hwnd;
     private uint _wmTaskbarButtonCreated;
     private bool _isInitialized;
+    private bool _areButtonsAdded;
 
     // Command IDs for the buttons
     private const int IdPrev = 1001;
@@ -74,12 +75,15 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
     {
         try
         {
-            var clsId = Guid.Parse("56FDF344-FD6D-11d0-958A-006097C9A090"); // CLSID_TaskbarList
-            var type = Type.GetTypeFromCLSID(clsId);
-            if (type != null)
+            if (_taskbarList == null)
             {
-                _taskbarList = (ITaskbarList3?)Activator.CreateInstance(type);
-                _taskbarList?.HrInit();
+                var clsId = Guid.Parse("56FDF344-FD6D-11d0-958A-006097C9A090"); // CLSID_TaskbarList
+                var type = Type.GetTypeFromCLSID(clsId);
+                if (type != null)
+                {
+                    _taskbarList = (ITaskbarList3?)Activator.CreateInstance(type);
+                    _taskbarList?.HrInit();
+                }
             }
 
             if (_taskbarList != null)
@@ -199,22 +203,35 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
             {
                 fixed (THUMBBUTTON* pButtons = buttons)
                 {
-                    try
+                    if (!_areButtonsAdded)
                     {
-                        // Try to update first
-                         _taskbarList.ThumbBarUpdateButtons(_hwnd, (uint)buttons.Length, pButtons);
-                    }
-                    catch
-                    {
-                        // If update fails, maybe we haven't added them yet.
-                        try
+                        var hr = _taskbarList.ThumbBarAddButtons(_hwnd, (uint)buttons.Length, pButtons);
+                        if (hr.Failed)
                         {
-                             _taskbarList.ThumbBarAddButtons(_hwnd, (uint)buttons.Length, pButtons);
+                            _logger.LogWarning("Failed to ADD taskbar buttons. HR: {HResult}", hr);
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            // This can happen if the window is not yet visible or taskbar button not created
-                            _logger.LogTrace(ex, "Failed to update/add taskbar buttons (expected during startup).");
+                            _areButtonsAdded = true;
+                        }
+                    }
+                    else
+                    {
+                        var hr = _taskbarList.ThumbBarUpdateButtons(_hwnd, (uint)buttons.Length, pButtons);
+                        if (hr.Failed)
+                        {
+                            _logger.LogWarning("Failed to UPDATE taskbar buttons. HR: {HResult}. Attempting re-add.", hr);
+
+                            // If update fails (e.g. explorer restart), try adding again
+                            var hrAdd = _taskbarList.ThumbBarAddButtons(_hwnd, (uint)buttons.Length, pButtons);
+                            if (hrAdd.Succeeded)
+                            {
+                                _areButtonsAdded = true;
+                            }
+                            else
+                            {
+                                _areButtonsAdded = false; // Reset state if both failed
+                            }
                         }
                     }
                 }
@@ -222,7 +239,7 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
         }
         catch (Exception ex)
         {
-             _logger.LogError(ex, "Error updating taskbar buttons.");
+             _logger.LogError(ex, "Error interacting with taskbar.");
         }
 
         // Clean up icons
