@@ -7,4 +7,12 @@
     mc:Ignorable="d"
     Title="Nagi">
 
+    <Grid>
+        <!-- Main Content -->
+        <!-- This will be populated by code-behind/navigation -->
+
+        <!-- Hidden container for generating taskbar icons -->
+        <Grid x:Name="TaskbarIconHost" Opacity="0" IsHitTestVisible="False" />
+    </Grid>
+
 </Window>

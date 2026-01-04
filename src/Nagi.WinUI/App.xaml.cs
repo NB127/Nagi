@@ -501,6 +501,8 @@ public partial class App : Application
         services.AddSingleton<IAppInfoService, AppInfoService>();
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<ITrayPopupService, TrayPopupService>();
+        services.AddSingleton<ITaskbarThumbnailGenerator, TaskbarThumbnailGenerator>();
+        services.AddSingleton<ITaskbarThumbnailService, TaskbarThumbnailService>();
         services.AddSingleton<IAudioPlayer>(provider =>
             new LibVlcAudioPlayerService(provider.GetRequiredService<IDispatcherService>(),
                 provider.GetRequiredService<ILogger<LibVlcAudioPlayerService>>()));
@@ -552,7 +554,14 @@ public partial class App : Application
             Services = ConfigureServices(_window, _window.DispatcherQueue, this, configuration);
 
             if (_window is MainWindow mainWindow)
+            {
                 mainWindow.InitializeDependencies(Services.GetRequiredService<IUISettingsService>());
+
+                // Initialize Taskbar Thumbnail Service
+                var taskbarService = Services.GetRequiredService<ITaskbarThumbnailService>();
+                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(mainWindow);
+                taskbarService.Initialize(hwnd);
+            }
         }
         catch (Exception ex)
         {
