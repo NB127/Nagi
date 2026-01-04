@@ -1,11 +1,15 @@
-// ReSharper disable InconsistentNaming
-// ReSharper disable IdentifierTypo
-// ReSharper disable CommentTypo
+// Copyright (c) Microsoft Corporation.  All rights reserved.
 
 using System;
 using System.Runtime.InteropServices;
+using System.Security;
 
 namespace Nagi.WinUI.Helpers;
+
+[ComImport]
+[Guid("56FDF344-FD6D-11d0-958A-006097C9A090")]
+[ClassInterface(ClassInterfaceType.None)]
+internal class TaskbarList;
 
 internal static class TaskbarNativeMethods
 {
@@ -23,41 +27,13 @@ internal static class TaskbarNativeMethods
     internal const uint THBF_ENABLED = 0x00000000;
     internal const uint THBF_DISABLED = 0x00000001;
     internal const uint THBF_HIDDEN = 0x00000008;
-    internal const uint THBF_NOBACKGROUND = 0x00000010;
-
-    [DllImport(User32, CharSet = CharSet.Auto)]
-    internal static extern nint SendMessage(nint hWnd, int msg, nint wParam, nint lParam);
-
-    [DllImport(Shell32, CharSet = CharSet.Auto)]
-    internal static extern uint RegisterWindowMessage(string msg);
-
-    [DllImport(Ole32)]
-    internal static extern int CoCreateInstance(
-        [In, MarshalAs(UnmanagedType.LPStruct)] Guid rclsid,
-        [In, MarshalAs(UnmanagedType.IUnknown)] object? pUnkOuter,
-        [In] uint dwClsContext,
-        [In, MarshalAs(UnmanagedType.LPStruct)] Guid riid,
-        [Out, MarshalAs(UnmanagedType.IUnknown)] out object ppv);
-
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    internal struct THUMBBUTTON
-    {
-        [MarshalAs(UnmanagedType.U4)]
-        public uint dwMask;
-        public uint iId;
-        public uint iBitmap;
-        public nint hIcon;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
-        public string szTip;
-        [MarshalAs(UnmanagedType.U4)]
-        public uint dwFlags;
-    }
 
     [ComImport]
-    [Guid("56FDF342-FD6D-11d0-958A-006097C9A090")]
+    [Guid("ea1afb91-9e28-4b86-90e9-9e9f8a5eefaf")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface ITaskbarList
+    internal interface ITaskbarList3
     {
+        // ITaskbarList
         [PreserveSig]
         void HrInit();
         [PreserveSig]
@@ -68,26 +44,18 @@ internal static class TaskbarNativeMethods
         void ActivateTab(IntPtr hwnd);
         [PreserveSig]
         void SetActiveAlt(IntPtr hwnd);
-    }
 
-    [ComImport]
-    [Guid("602D4487-4494-4457-A9D5-4B3819528A63")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface ITaskbarList2 : ITaskbarList
-    {
+        // ITaskbarList2
         [PreserveSig]
-        void MarkFullscreenWindow(IntPtr hwnd, [MarshalAs(UnmanagedType.Bool)] bool fFullscreen);
-    }
+        void MarkFullscreenWindow(
+            IntPtr hwnd,
+            [MarshalAs(UnmanagedType.Bool)] bool fFullscreen);
 
-    [ComImport]
-    [Guid("ea1afb91-9e28-4b86-90e9-9e9f8a5eefaf")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    internal interface ITaskbarList3 : ITaskbarList2
-    {
+        // ITaskbarList3
         [PreserveSig]
         void SetProgressValue(IntPtr hwnd, ulong ullCompleted, ulong ullTotal);
         [PreserveSig]
-        void SetProgressState(IntPtr hwnd, uint tbpFlags);
+        void SetProgressState(IntPtr hwnd, TBPFLAG tbpFlags);
         [PreserveSig]
         void RegisterTab(IntPtr hwndTab, IntPtr hwndMDI);
         [PreserveSig]
@@ -97,33 +65,58 @@ internal static class TaskbarNativeMethods
         [PreserveSig]
         void SetTabActive(IntPtr hwndTab, IntPtr hwndMDI, uint dwReserved);
         [PreserveSig]
-        int ThumbBarAddButtons(IntPtr hwnd, uint cButtons, [MarshalAs(UnmanagedType.LPArray)] THUMBBUTTON[] pButton);
+        [return: MarshalAs(UnmanagedType.I4)]
+        int ThumbBarAddButtons(
+            IntPtr hwnd,
+            uint cButtons,
+            [MarshalAs(UnmanagedType.LPArray)] THUMBBUTTON[] pButton);
         [PreserveSig]
-        int ThumbBarUpdateButtons(IntPtr hwnd, uint cButtons, [MarshalAs(UnmanagedType.LPArray)] THUMBBUTTON[] pButton);
+        [return: MarshalAs(UnmanagedType.I4)]
+        int ThumbBarUpdateButtons(
+            IntPtr hwnd,
+            uint cButtons,
+            [MarshalAs(UnmanagedType.LPArray)] THUMBBUTTON[] pButton);
         [PreserveSig]
         void ThumbBarSetImageList(IntPtr hwnd, IntPtr himl);
         [PreserveSig]
-        void SetOverlayIcon(IntPtr hwnd, IntPtr hIcon, [MarshalAs(UnmanagedType.LPWStr)] string pszDescription);
+        void SetOverlayIcon(
+          IntPtr hwnd,
+          IntPtr hIcon,
+          [MarshalAs(UnmanagedType.LPWStr)] string pszDescription);
         [PreserveSig]
-        void SetThumbnailTooltip(IntPtr hwnd, [MarshalAs(UnmanagedType.LPWStr)] string pszTip);
+        void SetThumbnailTooltip(
+            IntPtr hwnd,
+            [MarshalAs(UnmanagedType.LPWStr)] string pszTip);
         [PreserveSig]
-        void SetThumbnailClip(IntPtr hwnd, IntPtr prcClip);
+        void SetThumbnailClip(
+            IntPtr hwnd,
+            /*[MarshalAs(UnmanagedType.LPStruct)]*/ ref RECT prcClip);
     }
     
-    [ComImport]
-    [Guid("56FDF344-FD6D-11d0-958A-006097C9A090")]
-    [ClassInterface(ClassInterfaceType.None)]
-    internal class TaskbarList;
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    internal struct THUMBBUTTON
+    {
+        /// <summary>
+        /// WPARAM value for a THUMBBUTTON being clicked.
+        /// </summary>
+        internal const int THBN_CLICKED = 0x1800;
+
+        [MarshalAs(UnmanagedType.U4)]
+        public THB dwMask;
+        public uint iId;
+        public uint iBitmap;
+        public IntPtr hIcon;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+        public string szTip;
+        [MarshalAs(UnmanagedType.U4)]
+        public THBF dwFlags;
+    }
     
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     internal static extern nint LoadImage(nint hinst, nint name, uint type, int cx, int cy, uint fuLoad);
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     internal static extern nint LoadLibrary(string lpFileName);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    internal static extern bool FreeLibrary(nint hModule);
     
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -138,4 +131,42 @@ internal static class TaskbarNativeMethods
 
     [DllImport("user32.dll")]
     internal static extern nint CallWindowProc(nint lpPrevWndFunc, nint hWnd, int msg, nint wParam, nint lParam);
+
+    [Flags]
+    internal enum THB : uint
+    {
+        Bitmap = 0x0001,
+        Icon = 0x0002,
+        Tooltip = 0x0004,
+        Flags = 0x0008
+    }
+
+    [Flags]
+    internal enum THBF : uint
+    {
+        Enabled = 0x0000,
+        Disabled = 0x0001,
+        DismissOnClick = 0x0002,
+        NoBackground = 0x0004,
+        Hidden = 0x0008,
+        NonInteractive = 0x0010
+    }
+
+    internal enum TBPFLAG
+    {
+        NoProgress = 0,
+        Indeterminate = 0x1,
+        Normal = 0x2,
+        Error = 0x4,
+        Paused = 0x8
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct RECT
+    {
+        public int left;
+        public int top;
+        public int right;
+        public int bottom;
+    }
 }

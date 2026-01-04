@@ -88,7 +88,7 @@ public class TaskbarService : ITaskbarService, IDisposable
         _buttons[0] = new THUMBBUTTON
         {
             iId = PREVIOUS_BUTTON_ID,
-            dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS,
+            dwMask = THB.Icon | THB.Tooltip | THB.Flags,
             hIcon = _prevIcon,
             szTip = "Previous"
         };
@@ -97,7 +97,7 @@ public class TaskbarService : ITaskbarService, IDisposable
         _buttons[1] = new THUMBBUTTON
         {
             iId = PLAY_PAUSE_BUTTON_ID,
-            dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS,
+            dwMask = THB.Icon | THB.Tooltip | THB.Flags,
             hIcon = _playIcon,
             szTip = "Play"
         };
@@ -106,7 +106,7 @@ public class TaskbarService : ITaskbarService, IDisposable
         _buttons[2] = new THUMBBUTTON
         {
             iId = NEXT_BUTTON_ID,
-            dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS,
+            dwMask = THB.Icon | THB.Tooltip | THB.Flags,
             hIcon = _nextIcon,
             szTip = "Next"
         };
@@ -123,7 +123,7 @@ public class TaskbarService : ITaskbarService, IDisposable
         if (_taskbarList == null || _buttons == null) return;
 
         var canGoPrevious = _playbackService.CurrentQueueIndex > 0 || _playbackService.CurrentRepeatMode == Core.Services.Data.RepeatMode.RepeatAll;
-        _buttons[0].dwFlags = canGoPrevious ? THBF_ENABLED : THBF_DISABLED;
+        _buttons[0].dwFlags = canGoPrevious ? THBF.Enabled : THBF.Disabled;
 
         // Play/Pause button state
         if (_playbackService.IsPlaying)
@@ -136,11 +136,11 @@ public class TaskbarService : ITaskbarService, IDisposable
             _buttons[1].hIcon = _playIcon;
             _buttons[1].szTip = "Play";
         }
-        _buttons[1].dwFlags = THBF_ENABLED;
+        _buttons[1].dwFlags = THBF.Enabled;
 
         // Next button state
         var canGoNext = _playbackService.CurrentQueueIndex < _playbackService.PlaybackQueue.Count - 1 || _playbackService.CurrentRepeatMode == Core.Services.Data.RepeatMode.RepeatAll;
-        _buttons[2].dwFlags = canGoNext ? THBF_ENABLED : THBF_DISABLED;
+        _buttons[2].dwFlags = canGoNext ? THBF.Enabled : THBF.Disabled;
         
         var updateButtonsResult = _taskbarList.ThumbBarUpdateButtons(_windowHandle, (uint)_buttons.Length, _buttons);
         if (updateButtonsResult != 0)
