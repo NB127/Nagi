@@ -167,7 +167,6 @@ public class TaskbarService : ITaskbarService, IDisposable
     {
         var lib = LoadLibrary(dllName);
         var icon = LoadImage(lib, (nint)resourceId, 1, 0, 0, 0);
-        FreeLibrary(lib);
         return icon;
     }
 
