@@ -70,7 +70,7 @@
     <!-- == MSIX Publishing Properties                                  == -->
     <!-- =============================================================== -->
     <PropertyGroup>
-        <PackageCertificateThumbprint>3EBE28646614296DE51CCE9C9B6C6F75427D7C6C</PackageCertificateThumbprint>
+        
         <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
         <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
         <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
@@ -98,7 +98,7 @@
         <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="$(WindowsAppSdkWinUIVersion)">
             <TreatAsUsed>true</TreatAsUsed>
         </PackageReference>
-        <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="$(MicrosoftWindowsSDKBuildToolsVersion)" />
+        <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7175" />
 
         <!-- Application Services (DI, Configuration) -->
         <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="$(MicrosoftExtensionsConfigurationFileExtensionsVersion)" />

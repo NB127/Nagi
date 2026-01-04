@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
@@ -474,6 +474,7 @@ public partial class App : Application
         services.AddSingleton<IAudioPlayer>(provider =>
             new LibVlcAudioPlayerService(provider.GetRequiredService<IDispatcherService>(),
                 provider.GetRequiredService<ILogger<LibVlcAudioPlayerService>>()));
+        services.AddSingleton<ITaskbarService, TaskbarService>();
     }
 
     private static void ConfigureViewModels(IServiceCollection services)
