@@ -20,5 +20,4 @@ GWL_WNDPROC
 CallWindowProc
 GetModuleHandle
 ChangeWindowMessageFilterEx
-MSGFLT_INFO
-MSGFLT
+CHANGE_WINDOW_MESSAGE_FILTER_EX_ACTION

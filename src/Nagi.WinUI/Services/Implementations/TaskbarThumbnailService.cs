@@ -59,7 +59,7 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
         _wmTaskbarButtonCreated = PInvoke.RegisterWindowMessage("TaskbarButtonCreated");
 
         // Ensure we receive the message even if UIPI blocks it (e.g. running as Admin)
-        PInvoke.ChangeWindowMessageFilterEx(_hwnd, _wmTaskbarButtonCreated, MSGFLT.MSGFLT_ALLOW, null);
+        PInvoke.ChangeWindowMessageFilterEx(_hwnd, _wmTaskbarButtonCreated, CHANGE_WINDOW_MESSAGE_FILTER_EX_ACTION.MSGFLT_ALLOW, null);
 
         // Hook the window procedure to listen for messages
         PInvoke.SetWindowSubclass(_hwnd, _subclassProcDelegate, SubclassId, 0);

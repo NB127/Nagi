@@ -165,7 +165,7 @@ public class TaskbarThumbnailGenerator : ITaskbarThumbnailGenerator
         fixed (byte* pXorBits = processedBytes)
         {
              return (nint)PInvoke.CreateIcon(
-                new HINSTANCE(PInvoke.GetModuleHandle((PCWSTR)null).DangerousGetHandle()),
+                new HINSTANCE((nint)PInvoke.GetModuleHandle((PCWSTR)null)),
                 width,
                 height,
                 1,  // Planes
