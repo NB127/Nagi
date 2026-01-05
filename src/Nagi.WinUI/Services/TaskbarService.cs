@@ -52,7 +52,6 @@ public class TaskbarService : ITaskbarService, IDisposable
             return;
         }
 
-        LoadIcons();
         InitializeButtons();
 
         _playbackService.PlaybackStateChanged += OnPlaybackStateChanged;
@@ -81,6 +80,27 @@ public class TaskbarService : ITaskbarService, IDisposable
 
     private void OnPlaybackStateChanged() => UpdateTaskbarButtons();
     private void OnTrackChanged() => UpdateTaskbarButtons();
+
+    public void UpdateIcons(nint previousIcon, nint playIcon, nint pauseIcon, nint nextIcon)
+    {
+        DestroyIcon(_prevIcon);
+        DestroyIcon(_playIcon);
+        DestroyIcon(_pauseIcon);
+        DestroyIcon(_nextIcon);
+
+        _prevIcon = previousIcon;
+        _playIcon = playIcon;
+        _pauseIcon = pauseIcon;
+        _nextIcon = nextIcon;
+
+        if (_buttons == null) return;
+
+        _buttons[0].hIcon = _prevIcon;
+        _buttons[1].hIcon = _playbackService.IsPlaying ? _pauseIcon : _playIcon;
+        _buttons[2].hIcon = _nextIcon;
+
+        UpdateTaskbarButtons();
+    }
 
     private void InitializeButtons()
     {
@@ -150,27 +170,6 @@ public class TaskbarService : ITaskbarService, IDisposable
         {
             _logger.LogError("Failed to update thumbnail buttons: HRESULT 0x{HResult:X}", hResult);
         }
-    }
-
-    private void LoadIcons()
-    {
-        _prevIcon = LoadIconFromSystem("imageres.dll", 222);
-        _nextIcon = LoadIconFromSystem("imageres.dll", 223);
-        _playIcon = LoadIconFromSystem("imageres.dll", 220);
-        _pauseIcon = LoadIconFromSystem("imageres.dll", 221);
-    }
-    
-    private nint LoadIconFromSystem(string dllName, int resourceId)
-    {
-        const uint LR_SHARED = 0x8000;
-
-        var lib = LoadLibrary(dllName);
-        var icon = LoadImage(lib, (nint)resourceId, 1, 0, 0, LR_SHARED);
-
-        // Do not free the library, the system needs it for the icon to be loaded.
-        // FreeLibrary(lib);
-
-        return icon;
     }
 
     public void Dispose()

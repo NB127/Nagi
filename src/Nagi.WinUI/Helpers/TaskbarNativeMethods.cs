@@ -173,6 +173,55 @@ internal static partial class TaskbarNativeMethods
 
     [DllImport("user32.dll")]
     internal static extern nint CallWindowProc(nint lpPrevWndFunc, nint hWnd, int msg, nint wParam, nint lParam);
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ICONINFO
+    {
+        public bool fIcon;
+        public int xHotspot;
+        public int yHotspot;
+        public IntPtr hbmMask;
+        public IntPtr hbmColor;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct BITMAPINFO
+    {
+        public BITMAPINFOHEADER bmiHeader;
+        public int bmiColors;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct BITMAPINFOHEADER
+    {
+        public int biSize;
+        public int biWidth;
+        public int biHeight;
+        public short biPlanes;
+        public short biBitCount;
+        public int biCompression;
+        public int biSizeImage;
+        public int biXPelsPerMeter;
+        public int biYPelsPerMeter;
+        public int biClrUsed;
+        public int biClrImportant;
+    }
+
+    internal const int BI_RGB = 0;
+    internal const int DIB_RGB_COLORS = 0;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern IntPtr CreateIconIndirect(ref ICONINFO iconInfo);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    internal static extern IntPtr CreateBitmap(int nWidth, int nHeight, uint cPlanes, uint cBitsPerPel, byte[] lpvBits);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    internal static extern IntPtr CreateDIBSection(IntPtr hdc, [In] ref BITMAPINFO pbmi, uint usage, out IntPtr ppvBits, IntPtr hSection, uint dwOffset);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool DeleteObject(IntPtr hObject);
 }
 
 [StructLayout(LayoutKind.Sequential)]
