@@ -114,7 +114,7 @@ public class TaskbarThumbnailGenerator : ITaskbarThumbnailGenerator
             _hostGrid.Children.Add(buttonContainer);
 
             // Layout pass
-            buttonContainer.Measure(new Size(40, 40));
+            buttonContainer.Measure(new Windows.Foundation.Size(40, 40));
             buttonContainer.Arrange(new Rect(0, 0, 40, 40));
             _hostGrid.UpdateLayout();
 
@@ -165,7 +165,7 @@ public class TaskbarThumbnailGenerator : ITaskbarThumbnailGenerator
         fixed (byte* pXorBits = processedBytes)
         {
              return (nint)PInvoke.CreateIcon(
-                new HINSTANCE(PInvoke.GetModuleHandle((PCWSTR)null)),
+                new HINSTANCE(PInvoke.GetModuleHandle((PCWSTR)null).DangerousGetHandle()),
                 width,
                 height,
                 1,  // Planes

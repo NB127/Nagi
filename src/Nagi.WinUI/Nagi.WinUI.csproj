@@ -70,6 +70,7 @@
     <!-- == MSIX Publishing Properties                                  == -->
     <!-- =============================================================== -->
     <PropertyGroup>
+        <PackageCertificateThumbprint>3EBE28646614296DE51CCE9C9B6C6F75427D7C6C</PackageCertificateThumbprint>
         <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
         <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
         <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>

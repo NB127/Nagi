@@ -59,7 +59,7 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
         _wmTaskbarButtonCreated = PInvoke.RegisterWindowMessage("TaskbarButtonCreated");
 
         // Ensure we receive the message even if UIPI blocks it (e.g. running as Admin)
-        PInvoke.ChangeWindowMessageFilterEx(_hwnd, _wmTaskbarButtonCreated, PInvoke.MSGFLT_ALLOW, null);
+        PInvoke.ChangeWindowMessageFilterEx(_hwnd, _wmTaskbarButtonCreated, MSGFLT.MSGFLT_ALLOW, null);
 
         // Hook the window procedure to listen for messages
         PInvoke.SetWindowSubclass(_hwnd, _subclassProcDelegate, SubclassId, 0);
@@ -233,32 +233,32 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
                 {
                     if (!_areButtonsAdded)
                     {
-                        var hr = _taskbarList.ThumbBarAddButtons(_hwnd, (uint)buttons.Length, pButtons);
-                        if (hr.Failed)
+                        try
                         {
-                            _logger.LogWarning("Failed to ADD taskbar buttons. HR: {HResult}", hr);
-                        }
-                        else
-                        {
+                            _taskbarList.ThumbBarAddButtons(_hwnd, (uint)buttons.Length, pButtons);
                             _areButtonsAdded = true;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to ADD taskbar buttons.");
                         }
                     }
                     else
                     {
-                        var hr = _taskbarList.ThumbBarUpdateButtons(_hwnd, (uint)buttons.Length, pButtons);
-                        if (hr.Failed)
+                        try
                         {
-                            _logger.LogWarning("Failed to UPDATE taskbar buttons. HR: {HResult}. Attempting re-add.", hr);
+                            _taskbarList.ThumbBarUpdateButtons(_hwnd, (uint)buttons.Length, pButtons);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to UPDATE taskbar buttons. Attempting re-add.");
 
-                            var hrAdd = _taskbarList.ThumbBarAddButtons(_hwnd, (uint)buttons.Length, pButtons);
-                            if (hrAdd.Succeeded)
+                            try
                             {
+                                _taskbarList.ThumbBarAddButtons(_hwnd, (uint)buttons.Length, pButtons);
                                 _areButtonsAdded = true;
                             }
-                            else
-                            {
-                                _areButtonsAdded = false;
-                            }
+                            catch { /* Ignore second failure */ }
                         }
                     }
                 }

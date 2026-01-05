@@ -21,3 +21,4 @@ CallWindowProc
 GetModuleHandle
 ChangeWindowMessageFilterEx
 MSGFLT_INFO
+MSGFLT
