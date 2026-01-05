@@ -12,7 +12,9 @@
         <!-- This will be populated by code-behind/navigation -->
 
         <!-- Hidden container for generating taskbar icons -->
-        <Grid x:Name="TaskbarIconHost" Opacity="0" IsHitTestVisible="False" />
+        <Grid Width="0" Height="0" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Visible">
+            <Grid x:Name="TaskbarIconHost" Opacity="1" IsHitTestVisible="False" />
+        </Grid>
     </Grid>
 
 </Window>
