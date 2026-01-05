@@ -46,7 +46,6 @@ ehthumbs.db
 
 # Secrets
 *.key
-[Aa]ppsettings.json
 [Ll]ocal.settings.json
 
 # Build output and temp files
