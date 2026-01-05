@@ -19,5 +19,3 @@ SetWindowLong
 GWL_WNDPROC
 CallWindowProc
 GetModuleHandle
-ChangeWindowMessageFilterEx
-CHANGE_WINDOW_MESSAGE_FILTER_EX_ACTION

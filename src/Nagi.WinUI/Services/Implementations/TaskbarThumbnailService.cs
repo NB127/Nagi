@@ -40,6 +40,9 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
     // Delegate to keep alive
     private SUBCLASSPROC _subclassProcDelegate;
 
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool ChangeWindowMessageFilterEx(IntPtr hWnd, uint msg, uint action, IntPtr changeInfo);
+
     public TaskbarThumbnailService(
         ILogger<TaskbarThumbnailService> logger,
         IMusicPlaybackService playbackService,
@@ -59,7 +62,8 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
         _wmTaskbarButtonCreated = PInvoke.RegisterWindowMessage("TaskbarButtonCreated");
 
         // Ensure we receive the message even if UIPI blocks it (e.g. running as Admin)
-        PInvoke.ChangeWindowMessageFilterEx(_hwnd, _wmTaskbarButtonCreated, CHANGE_WINDOW_MESSAGE_FILTER_EX_ACTION.MSGFLT_ALLOW, null);
+        // MSGFLT_ALLOW = 1
+        ChangeWindowMessageFilterEx((IntPtr)_hwnd, _wmTaskbarButtonCreated, 1, IntPtr.Zero);
 
         // Hook the window procedure to listen for messages
         PInvoke.SetWindowSubclass(_hwnd, _subclassProcDelegate, SubclassId, 0);
