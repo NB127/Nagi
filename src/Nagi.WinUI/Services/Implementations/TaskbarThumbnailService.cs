@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Nagi.Core.Services.Abstractions;
 using Nagi.WinUI.Services.Abstractions;
 using System.Threading.Tasks;
+using Microsoft.UI.Dispatching;
 
 namespace Nagi.WinUI.Services.Implementations;
 
@@ -16,6 +17,7 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
     private readonly ILogger<TaskbarThumbnailService> _logger;
     private readonly IMusicPlaybackService _playbackService;
     private readonly ITaskbarThumbnailGenerator _thumbnailGenerator;
+    private readonly DispatcherQueue _dispatcherQueue;
 
     private ITaskbarList3? _taskbarList;
     private HWND _hwnd;
@@ -46,11 +48,13 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
     public TaskbarThumbnailService(
         ILogger<TaskbarThumbnailService> logger,
         IMusicPlaybackService playbackService,
-        ITaskbarThumbnailGenerator thumbnailGenerator)
+        ITaskbarThumbnailGenerator thumbnailGenerator,
+        DispatcherQueue dispatcherQueue)
     {
         _logger = logger;
         _playbackService = playbackService;
         _thumbnailGenerator = thumbnailGenerator;
+        _dispatcherQueue = dispatcherQueue;
         _subclassProcDelegate = new SUBCLASSPROC(SubclassProc);
     }
 
@@ -74,7 +78,7 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
 
         _isInitialized = true;
 
-        // Initial setup attempt
+        // Initial setup attempt - on UI thread
         InitializeTaskbarList();
 
         // Start a retry loop to ensure buttons are added if the window wasn't ready immediately
@@ -89,17 +93,20 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
             if (_areButtonsAdded) return;
             await Task.Delay(1000);
 
-            // Dispatch to UI thread if needed (UpdateButtons is async void but usually safe)
-            // But checking _areButtonsAdded is thread-safe enough for this boolean check
-            if (!_areButtonsAdded)
+            // Dispatch to UI thread to interact with taskbar
+            _dispatcherQueue.TryEnqueue(() =>
             {
-                InitializeTaskbarList();
-            }
+                if (!_areButtonsAdded)
+                {
+                    InitializeTaskbarList();
+                }
+            });
         }
     }
 
     private void InitializeTaskbarList()
     {
+        // Must be on UI thread for STA COM object
         try
         {
             if (_taskbarList == null)
@@ -115,6 +122,7 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
 
             if (_taskbarList != null)
             {
+                // UpdateButtons logic ensures Add is called if needed
                 UpdateButtons();
             }
         }
@@ -165,12 +173,14 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
 
     private void OnPlaybackStateChanged()
     {
-        UpdateButtons();
+        // Ensure UI thread for COM interaction
+        _dispatcherQueue.TryEnqueue(UpdateButtons);
     }
 
     private void OnTrackChanged()
     {
-        UpdateButtons();
+        // Ensure UI thread for COM interaction
+        _dispatcherQueue.TryEnqueue(UpdateButtons);
     }
 
     private async void UpdateButtons()
@@ -192,12 +202,6 @@ public partial class TaskbarThumbnailService : ITaskbarThumbnailService
             prevIcon = await _thumbnailGenerator.GenerateIconAsync(GlyphPrevious);
             playPauseIcon = await _thumbnailGenerator.GenerateIconAsync(playPauseGlyph);
             nextIcon = await _thumbnailGenerator.GenerateIconAsync(GlyphNext);
-        }
-
-        // LOGGING: Check if icons are generated
-        if (hasSong && prevIcon == IntPtr.Zero)
-        {
-             _logger.LogWarning("Icons generation failed (Handle is 0).");
         }
 
         var buttons = new THUMBBUTTON[3];
