@@ -21,6 +21,7 @@ public class TaskbarService : ITaskbarService, IDisposable
     private ITaskbarList4? _taskbarList;
     private nint _windowHandle;
     private bool _isDisposed;
+    private uint _wmTaskbarButtonCreated;
 
     private THUMBBUTTON[]? _buttons;
     private nint _prevIcon;
@@ -52,6 +53,7 @@ public class TaskbarService : ITaskbarService, IDisposable
             return;
         }
 
+        _wmTaskbarButtonCreated = RegisterWindowMessage("TaskbarButtonCreated");
         InitializeButtons();
 
         _playbackService.PlaybackStateChanged += OnPlaybackStateChanged;
@@ -62,6 +64,12 @@ public class TaskbarService : ITaskbarService, IDisposable
 
     public void HandleWindowMessage(int msg, nint wParam, nint lParam)
     {
+        if (msg == _wmTaskbarButtonCreated)
+        {
+            InitializeButtons();
+            return;
+        }
+
         if (_taskbarList is null || msg != WM_COMMAND || HIWORD(wParam) != THBN_CLICKED) return;
 
         switch (LOWORD(wParam))
