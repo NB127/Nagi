@@ -54,7 +54,6 @@ public class TaskbarService : ITaskbarService, IDisposable
         }
 
         _wmTaskbarButtonCreated = RegisterWindowMessage("TaskbarButtonCreated");
-        InitializeButtons();
 
         _playbackService.PlaybackStateChanged += OnPlaybackStateChanged;
         _playbackService.TrackChanged += OnTrackChanged;
@@ -66,7 +65,7 @@ public class TaskbarService : ITaskbarService, IDisposable
     {
         if (msg == _wmTaskbarButtonCreated)
         {
-            InitializeButtons();
+            if (_buttons != null) InitializeButtons();
             return;
         }
 
@@ -101,13 +100,17 @@ public class TaskbarService : ITaskbarService, IDisposable
         _pauseIcon = pauseIcon;
         _nextIcon = nextIcon;
 
-        if (_buttons == null) return;
-
-        _buttons[0].hIcon = _prevIcon;
-        _buttons[1].hIcon = _playbackService.IsPlaying ? _pauseIcon : _playIcon;
-        _buttons[2].hIcon = _nextIcon;
-
-        UpdateTaskbarButtons();
+        if (_buttons == null)
+        {
+            InitializeButtons();
+        }
+        else
+        {
+            _buttons[0].hIcon = _prevIcon;
+            _buttons[1].hIcon = _playbackService.IsPlaying ? _pauseIcon : _playIcon;
+            _buttons[2].hIcon = _nextIcon;
+            UpdateTaskbarButtons();
+        }
     }
 
     private void InitializeButtons()
