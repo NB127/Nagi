@@ -121,6 +121,11 @@
         <PackageReference Include="SixLabors.ImageSharp" Version="$(SixLaborsImageSharpVersion)" />
         <PackageReference Include="VideoLAN.LibVLC.Windows" Version="$(LibVLCWindowsVersion)" />
 
+        <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.106">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+
         <!-- Updater (Unpackaged only) -->
         <PackageReference Include="Velopack" Version="$(VelopackVersion)" Condition="$(Configuration.Contains('Unpackaged'))" />
     </ItemGroup>
